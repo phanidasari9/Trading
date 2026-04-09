@@ -1,5 +1,6 @@
 [server]
-headless = false
+# Non-interactive startup; Cloud and CI expect the server to listen immediately.
+headless = true
 
 [browser]
 gatherUsageStats = false

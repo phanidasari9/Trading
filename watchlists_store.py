@@ -1,10 +1,15 @@
 """
 Persistent watchlists (named ticker universes), JSON file next to this package.
+
+On Streamlit Community Cloud the app directory is read-only: we read bundled
+``watchlists.json`` from the repo when present, and write saves under the
+system temp dir instead of failing with PermissionError.
 """
 from __future__ import annotations
 
 import json
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -12,8 +17,30 @@ LIST_NAME_PATTERN = re.compile(r"^[\w\-. ]{1,64}$")
 STORE_FILENAME = "watchlists.json"
 
 
-def store_path() -> Path:
+def _bundled_store_path() -> Path:
     return Path(__file__).resolve().parent / STORE_FILENAME
+
+
+def _app_dir_writable() -> bool:
+    d = Path(__file__).resolve().parent
+    try:
+        probe = d / ".watchlists_write_probe"
+        probe.write_text("1", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return True
+    except OSError:
+        return False
+
+
+def _writable_store_path() -> Path:
+    if _app_dir_writable():
+        return _bundled_store_path()
+    return Path(tempfile.gettempdir()) / "trading_dashboard_watchlists.json"
+
+
+def store_path() -> Path:
+    """Path used when saving (app dir if writable, else temp — e.g. Streamlit Cloud)."""
+    return _writable_store_path()
 
 
 def _normalize_name(name: str) -> str:
@@ -30,32 +57,33 @@ def validate_list_name(name: str) -> str | None:
 
 
 def load_store() -> dict[str, Any]:
-    path = store_path()
-    if not path.exists():
-        return {"lists": {}}
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return {"lists": {}}
-    if not isinstance(data, dict):
-        return {"lists": {}}
-    lists_raw = data.get("lists")
-    if not isinstance(lists_raw, dict):
-        lists_raw = {}
-    lists: dict[str, list[str]] = {}
-    for key, val in lists_raw.items():
-        if not isinstance(key, str):
+    for path in (store_path(), _bundled_store_path()):
+        if not path.exists():
             continue
-        kn = _normalize_name(key)
-        if not kn:
+        try:
+            with path.open(encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
             continue
-        if isinstance(val, list):
-            sym = [str(x).strip().upper() for x in val if str(x).strip()]
-            lists[kn] = list(dict.fromkeys(sym))
-        elif val is None:
-            lists[kn] = []
-    return {"lists": lists}
+        if not isinstance(data, dict):
+            continue
+        lists_raw = data.get("lists")
+        if not isinstance(lists_raw, dict):
+            lists_raw = {}
+        lists: dict[str, list[str]] = {}
+        for key, val in lists_raw.items():
+            if not isinstance(key, str):
+                continue
+            kn = _normalize_name(key)
+            if not kn:
+                continue
+            if isinstance(val, list):
+                sym = [str(x).strip().upper() for x in val if str(x).strip()]
+                lists[kn] = list(dict.fromkeys(sym))
+            elif val is None:
+                lists[kn] = []
+        return {"lists": lists}
+    return {"lists": {}}
 
 
 def save_store(lists: dict[str, list[str]]) -> None:

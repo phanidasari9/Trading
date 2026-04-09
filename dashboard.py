@@ -58,7 +58,6 @@ from trading_ui import (
 
 st.set_page_config(
     page_title="Trading Command Center",
-    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )

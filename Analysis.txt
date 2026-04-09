@@ -1,0 +1,133 @@
+import yfinance as yf
+import pandas as pd
+from datetime import datetime
+
+# -----------------------------------
+# 1. User-defined ticker universe
+# -----------------------------------
+tickers = [
+    "AAPL", "MSFT", "NVDA", "AMZN", "TSLA", "META", "GOOGL", "GOOG",
+    "AMD", "NFLX", "PLTR", "MU", "AVGO", "COST", "WMT", "INTC",
+    "AAL", "QQQ", "SPY", "UEC", "BAC", "JPM", "DIS", "PYPL", "UBER"
+]
+
+# -----------------------------------
+# 2. Settings
+# -----------------------------------
+history_period = "3mo"       # used for avg volume calculation
+min_price = 5                # ignore penny/very low price stocks
+min_avg_volume = 500000      # ignore illiquid stocks
+top_n = 10                   # number of rows to show
+volume_spike_threshold = 2.0 # current volume >= 2x avg volume
+
+# -----------------------------------
+# 3. Download data
+# -----------------------------------
+def fetch_stock_data(tickers):
+    rows = []
+
+    for ticker in tickers:
+        try:
+            stock = yf.Ticker(ticker)
+
+            hist = stock.history(period=history_period, auto_adjust=False)
+
+            if hist.empty or len(hist) < 2:
+                continue
+
+            # latest row
+            latest = hist.iloc[-1]
+            prev = hist.iloc[-2]
+
+            close_price = float(latest["Close"])
+            prev_close = float(prev["Close"])
+            current_volume = float(latest["Volume"])
+
+            # 20-day average volume
+            avg_volume_20 = float(hist["Volume"].tail(20).mean()) if len(hist) >= 20 else float(hist["Volume"].mean())
+
+            if prev_close == 0 or avg_volume_20 == 0:
+                continue
+
+            pct_change = ((close_price - prev_close) / prev_close) * 100
+            volume_spike = current_volume / avg_volume_20
+
+            # liquidity filters
+            if close_price < min_price:
+                continue
+            if avg_volume_20 < min_avg_volume:
+                continue
+
+            rows.append({
+                "Ticker": ticker,
+                "Close": round(close_price, 2),
+                "Prev Close": round(prev_close, 2),
+                "% Change": round(pct_change, 2),
+                "Volume": int(current_volume),
+                "Avg Volume 20D": int(avg_volume_20),
+                "Volume Spike": round(volume_spike, 2)
+            })
+
+        except Exception as e:
+            print(f"Error processing {ticker}: {e}")
+
+    return pd.DataFrame(rows)
+
+# -----------------------------------
+# 4. Rank results
+# -----------------------------------
+def get_market_movers(df, top_n=10, spike_threshold=2.0):
+    if df.empty:
+        return None, None, None, None
+
+    most_active = df.sort_values(by="Volume", ascending=False).head(top_n)
+    top_gainers = df.sort_values(by="% Change", ascending=False).head(top_n)
+    top_losers = df.sort_values(by="% Change", ascending=True).head(top_n)
+    volume_spikes = df[df["Volume Spike"] >= spike_threshold] \
+        .sort_values(by="Volume Spike", ascending=False) \
+        .head(top_n)
+
+    return most_active, top_gainers, top_losers, volume_spikes
+
+# -----------------------------------
+# 5. Save output
+# -----------------------------------
+def save_results_to_excel(most_active, top_gainers, top_losers, volume_spikes, file_name):
+    with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
+        most_active.to_excel(writer, sheet_name="Most Active", index=False)
+        top_gainers.to_excel(writer, sheet_name="Top Gainers", index=False)
+        top_losers.to_excel(writer, sheet_name="Top Losers", index=False)
+        volume_spikes.to_excel(writer, sheet_name="Volume Spikes", index=False)
+
+# -----------------------------------
+# 6. Main
+# -----------------------------------
+if __name__ == "__main__":
+    print("Fetching stock data...")
+    df = fetch_stock_data(tickers)
+
+    if df.empty:
+        print("No valid stock data found.")
+    else:
+        most_active, top_gainers, top_losers, volume_spikes = get_market_movers(
+            df, top_n=top_n, spike_threshold=volume_spike_threshold
+        )
+
+        print("\n=== MOST ACTIVE STOCKS ===")
+        print(most_active.to_string(index=False))
+
+        print("\n=== TOP GAINERS ===")
+        print(top_gainers.to_string(index=False))
+
+        print("\n=== TOP LOSERS ===")
+        print(top_losers.to_string(index=False))
+
+        print("\n=== VOLUME SPIKES ===")
+        if not volume_spikes.empty:
+            print(volume_spikes.to_string(index=False))
+        else:
+            print("No stocks met the volume spike threshold.")
+
+        output_file = f"market_movers_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        save_results_to_excel(most_active, top_gainers, top_losers, volume_spikes, output_file)
+        print(f"\nSaved results to: {output_file}")

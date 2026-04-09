@@ -1,0 +1,17 @@
+.venv
+venv
+__pycache__
+*.py[cod]
+.git
+.gitignore
+*.egg-info
+.eggs
+dist
+build
+*.log
+.pytest_cache
+.mypy_cache
+.ruff_cache
+watchlists.json
+terminals
+.cursor

@@ -1,0 +1,26 @@
+[project]
+name = "trading-dashboard"
+version = "0.1.0"
+description = "Streamlit trading dashboard: equity movers, watchlists, and options flow (Options.py)."
+requires-python = ">=3.10"
+dependencies = [
+    "yfinance>=0.2.40",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "streamlit>=1.28.0",
+    "plotly>=5.18.0",
+]
+
+[project.optional-dependencies]
+options-html-png = [
+    "playwright>=1.40.0",
+]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["trading_dashboard*"]

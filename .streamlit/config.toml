@@ -1,0 +1,14 @@
+[server]
+headless = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
+# Light green — primary buttons, sliders, links, focus ring
+primaryColor = "#86efac"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0fdf4"
+textColor = "#14532d"
+font = "sans serif"

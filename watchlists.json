@@ -1,0 +1,31 @@
+{
+  "lists": {
+    "Default": [
+      "AAPL",
+      "MSFT",
+      "NVDA",
+      "AMZN",
+      "TSLA",
+      "META",
+      "GOOGL",
+      "GOOG",
+      "AMD",
+      "NFLX",
+      "PLTR",
+      "MU",
+      "AVGO",
+      "COST",
+      "WMT",
+      "INTC",
+      "AAL",
+      "QQQ",
+      "SPY",
+      "UEC",
+      "BAC",
+      "JPM",
+      "DIS",
+      "PYPL",
+      "UBER"
+    ]
+  }
+}

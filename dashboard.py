@@ -19,7 +19,13 @@ from BestWiningOptionsv1 import (
     run_best_wining_full_scan,
 )
 from Flow import money_flow_excel_bytes, run_money_flow_scan
-from OptionSwing import format_swing_display_df, run_swing_full_scan, swing_results_to_excel_bytes
+from OptionSwing import (
+    format_swing_display_df,
+    run_swing_full_scan,
+    run_swing_scan,
+    swing_scan_to_excel_bytes,
+    swing_results_to_excel_bytes,
+)
 from Options import (
     AnalyzerConfig,
     DashboardRendererV2,
@@ -207,6 +213,10 @@ if "swing_df" not in st.session_state:
     st.session_state.swing_df = None
 if "swing_contract_df" not in st.session_state:
     st.session_state.swing_contract_df = None
+if "swing_stocks_market_context" not in st.session_state:
+    st.session_state.swing_stocks_market_context = None
+if "swing_stocks_df" not in st.session_state:
+    st.session_state.swing_stocks_df = None
 if "best_wining_mc" not in st.session_state:
     st.session_state.best_wining_mc = None
 if "best_wining_stock_df" not in st.session_state:
@@ -242,8 +252,8 @@ if run or st.session_state.df.empty:
 
 df = st.session_state.df
 
-tab_movers, tab_options, tab_swing, tab_best, tab_flow = st.tabs(
-    ["Market movers", "Options", "Swing options", "BestOptions", "Flow"]
+tab_movers, tab_options, tab_swing, tab_swing_stocks, tab_best, tab_flow = st.tabs(
+    ["Market movers", "Options", "Swing options", "SwingStocks", "BestOptions", "Flow"]
 )
 
 with tab_movers:
@@ -689,6 +699,83 @@ with tab_swing:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
             key="dl_swing_xlsx",
+        )
+
+with tab_swing_stocks:
+    st.subheader("SwingStocks")
+    st.caption(
+        "Stock-only scan from **`OptionSwing.py`** (market context, setup score, bias, tags). "
+        "No option-chain filtering in this tab."
+    )
+
+    max_swing_stocks = st.slider(
+        "Max tickers to scan (stocks only)",
+        min_value=1,
+        max_value=30,
+        value=12,
+        key="swing_stocks_max_tickers",
+    )
+    run_swing_stocks = st.button(
+        "Run SwingStocks scan",
+        type="primary",
+        use_container_width=True,
+        key="run_swing_stocks_btn",
+    )
+
+    if run_swing_stocks:
+        syms_ss = tickers_for_run(tickers_raw)[:max_swing_stocks]
+        if not syms_ss:
+            st.warning("Enter **Single ticker** or add symbols in the sidebar editor.")
+        else:
+            try:
+                with st.spinner("OptionSwing stock setups (yfinance)…"):
+                    smc, ssdf = run_swing_scan(syms_ss)
+                    st.session_state.swing_stocks_market_context = smc
+                    st.session_state.swing_stocks_df = ssdf
+            except Exception as e:  # noqa: BLE001
+                st.session_state.swing_stocks_market_context = None
+                st.session_state.swing_stocks_df = None
+                st.error(f"SwingStocks scan failed: {e}")
+
+    if st.session_state.swing_stocks_df is None:
+        st.info("Click **Run SwingStocks scan** to load stock-only results from `OptionSwing.py`.")
+    else:
+        smc = st.session_state.swing_stocks_market_context or {}
+        ssdf = st.session_state.swing_stocks_df
+        sdisplay = format_swing_display_df(ssdf)
+
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("Market (composite)", smc.get("market_direction", "—"))
+        s2.metric("SPY", f"{smc.get('SPY_direction', '—')} ({smc.get('SPY_daily_change_pct', 0)}%)")
+        s3.metric("QQQ", f"{smc.get('QQQ_direction', '—')} ({smc.get('QQQ_daily_change_pct', 0)}%)")
+        s_err = int(ssdf["error"].notna().sum()) if "error" in ssdf.columns else 0
+        s4.metric("Stocks", f"{len(ssdf)}" + (f" ({s_err} err)" if s_err else ""))
+
+        st.markdown("**Stock setups** (sorted; errors last)")
+        st.dataframe(sdisplay, use_container_width=True, hide_index=True)
+
+        schart = sdisplay.copy()
+        if "error" in schart.columns:
+            schart = schart[schart["error"].isna()]
+        if not schart.empty and "setup_score" in schart.columns and "ticker" in schart.columns:
+            fig_ss = px.bar(
+                schart,
+                x="ticker",
+                y="setup_score",
+                color="trade_bias" if "trade_bias" in schart.columns else None,
+                title="SwingStocks setup score by symbol",
+                color_discrete_map=CHART_BIAS,
+            )
+            st.plotly_chart(fig_ss, use_container_width=True)
+
+        ss_xname = f"swing_stocks_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        st.download_button(
+            "Download Excel (StockSetups only)",
+            data=swing_scan_to_excel_bytes(sdisplay),
+            file_name=ss_xname,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="dl_swing_stocks_xlsx",
         )
 
 with tab_best:

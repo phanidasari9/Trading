@@ -469,9 +469,9 @@ class DashboardRendererV2:
     @staticmethod
     def bias_color(label: str) -> str:
         if label == "Bullish":
-            return "#22c55e"
+            return "#00C805"
         if label == "Bearish":
-            return "#15803d"
+            return "#FF5000"
         return "#f59e0b"
 
     @staticmethod
@@ -818,11 +818,11 @@ class DashboardRendererV2:
         border: 1px solid #2a3c5b;
     }}
     .premium-call {{
-        background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
+        background: linear-gradient(90deg, #00A004 0%, #00C805 100%);
         height: 100%;
     }}
     .premium-put {{
-        background: linear-gradient(90deg, #047857 0%, #10b981 100%);
+        background: linear-gradient(90deg, #E04000 0%, #FF5000 100%);
         height: 100%;
     }}
     .premium-bar-labels {{
@@ -868,10 +868,10 @@ class DashboardRendererV2:
         letter-spacing: 0.05em;
     }}
     .green {{
-        color: #22c55e;
+        color: #00C805;
     }}
     .red {{
-        color: #16a34a;
+        color: #FF5000;
     }}
     .muted {{
         color: #94a3b8;
@@ -949,10 +949,10 @@ class DashboardRendererV2:
         border-radius: 999px;
     }}
     .flow-bar.green {{
-        background: linear-gradient(90deg, #15803d 0%, #22c55e 100%);
+        background: linear-gradient(90deg, #00A004 0%, #00C805 100%);
     }}
     .flow-bar.red {{
-        background: linear-gradient(90deg, #047857 0%, #34d399 100%);
+        background: linear-gradient(90deg, #E04000 0%, #FF5000 100%);
     }}
     .flow-meta {{
         display: flex;

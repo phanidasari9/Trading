@@ -7,9 +7,9 @@ gatherUsageStats = false
 
 [theme]
 base = "light"
-# Light green — primary buttons, sliders, links, focus ring
-primaryColor = "#86efac"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f0fdf4"
-textColor = "#14532d"
+# Robinhood-inspired: green primary, clean white / gray surfaces
+primaryColor = "#00C805"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F7F8"
+textColor = "#1C1C1C"
 font = "sans serif"
